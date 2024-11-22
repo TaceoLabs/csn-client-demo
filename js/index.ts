@@ -5,9 +5,10 @@ import wc from "./witness_calculator.js"; // generated with circom
 // TODO change the vars
 const JOB_DEFINITION = "job-definition-id";
 const ACCESS_TOKEN = "access-token";
+const SERVER_URL = "https://csn.taceo.io"
 
 const configParams: ConfigurationParameters = {
-  basePath: 'http://localhost:3000',
+  basePath: SERVER_URL,
   accessToken: ACCESS_TOKEN,
 }
 
