@@ -1,136 +1,87 @@
-import { ConfigurationParameters, Configuration, JobApi, JobResult, scheduleFullJob, scheduleProofJob } from '@taceo/csn-client';
-import { readFileSync } from 'fs';
+import {
+  ConfigurationParameters,
+  Configuration,
+  JobApi,
+  JobResult,
+  scheduleFullJob,
+  scheduleProofJob,
+} from "@taceo/csn-client";
+import { readFileSync } from "fs";
 import wc from "./witness_calculator.js"; // generated with circom
 
 // TODO change the vars
-const JOB_DEFINITION = "job-definition-id";
-const ACCESS_TOKEN = "access-token";
-const SERVER_URL = "https://csn.taceo.io"
+const JOB_DEFINITION = "0d6ef6e4-4245-4751-9f76-9084e084aaac";
+const ACCESS_TOKEN = "lUyB6r9zWgl95rVzq0FXc8TwP98uKxsP";
+const SERVER_URL = "https://csn.taceo.io";
 
 const configParams: ConfigurationParameters = {
   basePath: SERVER_URL,
   accessToken: ACCESS_TOKEN,
-}
+};
 
-const congiuration = new Configuration(configParams)
+const congiuration = new Configuration(configParams);
 const apiInstance = new JobApi(congiuration);
 
 /**
  * Schedule a full job with witness extension on the network and get its id.
-*/
-async function scheduleJob(public_inputs: string[], input: any): Promise<string> {
-  return scheduleFullJob(apiInstance, JOB_DEFINITION, public_inputs, input)
+ */
+async function scheduleJob(
+  public_inputs: string[],
+  input: any
+): Promise<string> {
+  return scheduleFullJob(apiInstance, JOB_DEFINITION, public_inputs, input);
 }
 
 /**
  * Perform the witness extension locally with the given wasm file and schedule a job on the network and get its id.
-*/
-async function scheduleJobLocalWtnsExt(circuit_wasm_path: string, num_pub_inputs: number, input: any): Promise<string> {
+ */
+async function scheduleJobLocalWtnsExt(
+  circuit_wasm_path: string,
+  num_pub_inputs: number,
+  input: any
+): Promise<string> {
   const wasm = readFileSync(circuit_wasm_path);
   const witnessCalculator = await wc(wasm);
-	const witness = await witnessCalculator.calculateWTNSBin(input, 0);
+  const witness = await witnessCalculator.calculateWTNSBin(input, 0);
+  console.log("calculated witness locally");
   return scheduleProofJob(apiInstance, JOB_DEFINITION, num_pub_inputs, witness);
 }
 
 /**
  * Poll the job status and get the job result.
-*/
+ */
 async function pollJobResult(id: string): Promise<JobResult | null> {
   while (true) {
     try {
       const getStatusRes = await apiInstance.getStatus({ id: id });
-      if (getStatusRes.status == 'Completed') {
+      if (getStatusRes.status == "Completed") {
         return getStatusRes;
-      } else if (getStatusRes.status == 'Failed') {
-        console.error('failed:', getStatusRes);
+      } else if (getStatusRes.status == "Failed") {
+        console.error("failed:", getStatusRes);
         return null;
       }
     } catch (error) {
-      console.error('error:', error);
+      console.error("error:", error);
       return null;
     }
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise((resolve) => setTimeout(resolve, 1000));
   }
 }
 
-const multplier2_public_inputs: string[] = [];
-const multiplier2_input = {
-  a: "2",
-  b: "3"
-};
-const multiplier2_num_pub_inputs = 1;
-
-const chacha20_public_inputs: string[] = ["in", "nonce", "counter"];
-const chacha20_input = {
-  key: [
-    ["0","0","0","0","0","0","1","1","0","0","0","0","0","0","1","0","0","0","0","0","0","0","0","1","0","0","0","0","0","0","0","0"],
-    ["0","0","0","0","0","1","1","1","0","0","0","0","0","1","1","0","0","0","0","0","0","1","0","1","0","0","0","0","0","1","0","0"],
-    ["0","0","0","0","1","0","1","1","0","0","0","0","1","0","1","0","0","0","0","0","1","0","0","1","0","0","0","0","1","0","0","0"],
-    ["0","0","0","0","1","1","1","1","0","0","0","0","1","1","1","0","0","0","0","0","1","1","0","1","0","0","0","0","1","1","0","0"],
-    ["0","0","0","1","0","0","1","1","0","0","0","1","0","0","1","0","0","0","0","1","0","0","0","1","0","0","0","1","0","0","0","0"],
-    ["0","0","0","1","0","1","1","1","0","0","0","1","0","1","1","0","0","0","0","1","0","1","0","1","0","0","0","1","0","1","0","0"],
-    ["0","0","0","1","1","0","1","1","0","0","0","1","1","0","1","0","0","0","0","1","1","0","0","1","0","0","0","1","1","0","0","0"],
-    ["0","0","0","1","1","1","1","1","0","0","0","1","1","1","1","0","0","0","0","1","1","1","0","1","0","0","0","1","1","1","0","0"]
-  ],
-  nonce: [
-    ["0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0"],
-    ["0","1","0","0","1","0","1","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0"],
-    ["0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0"]
-  ],
-  counter: ["0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","1"],
-  in: [
-    ["0","1","1","0","1","0","0","1","0","1","1","0","0","1","0","0","0","1","1","0","0","0","0","1","0","1","0","0","1","1","0","0"],
-    ["0","1","1","0","0","0","0","1","0","0","1","0","0","0","0","0","0","1","1","1","0","0","1","1","0","1","1","0","0","1","0","1"],
-    ["0","1","0","0","0","1","1","1","0","0","1","0","0","0","0","0","0","1","1","0","0","1","0","0","0","1","1","0","1","1","1","0"],
-    ["0","1","1","0","1","1","0","0","0","1","1","1","0","1","0","0","0","1","1","0","1","1","1","0","0","1","1","0","0","1","0","1"],
-    ["0","1","1","0","1","1","1","0","0","1","1","0","0","1","0","1","0","1","1","0","1","1","0","1","0","1","1","0","0","1","0","1"],
-    ["0","0","1","0","0","0","0","0","0","1","1","0","0","1","1","0","0","1","1","0","1","1","1","1","0","0","1","0","0","0","0","0"],
-    ["0","0","1","0","0","0","0","0","0","1","1","0","0","1","0","1","0","1","1","0","1","0","0","0","0","1","1","1","0","1","0","0"],
-    ["0","1","1","1","0","0","1","1","0","1","1","0","0","0","0","1","0","1","1","0","1","1","0","0","0","1","1","0","0","0","1","1"],
-    ["0","1","1","0","0","1","1","0","0","1","1","0","1","1","1","1","0","0","1","0","0","0","0","0","0","1","1","1","0","0","1","1"],
-    ["0","0","1","1","1","0","0","1","0","0","1","1","1","0","0","1","0","0","1","0","0","1","1","1","0","0","1","0","0","0","0","0"],
-    ["0","1","1","0","0","1","1","0","0","1","0","0","1","0","0","1","0","0","1","0","0","0","0","0","0","0","1","1","1","0","1","0"],
-    ["0","1","1","0","0","0","1","1","0","0","1","0","0","0","0","0","0","1","0","0","1","0","0","1","0","0","1","0","0","0","0","0"],
-    ["0","1","1","0","0","1","0","0","0","1","1","0","1","1","0","0","0","1","1","1","0","1","0","1","0","1","1","0","1","1","1","1"],
-    ["0","1","1","0","0","1","1","0","0","1","1","0","0","1","1","0","0","1","1","0","1","1","1","1","0","0","1","0","0","0","0","0"],
-    ["0","1","1","1","1","0","0","1","0","0","1","0","0","0","0","0","0","1","1","1","0","0","1","0","0","1","1","0","0","1","0","1"],
-    ["0","1","1","0","1","1","1","1","0","0","1","0","0","0","0","0","0","1","1","1","0","1","0","1","0","1","1","0","1","1","1","1"],
-    ["0","1","1","0","1","0","0","1","0","1","1","0","0","1","0","0","0","1","1","0","0","0","0","1","0","1","0","0","1","1","0","0"],
-    ["0","1","1","0","0","0","0","1","0","0","1","0","0","0","0","0","0","1","1","1","0","0","1","1","0","1","1","0","0","1","0","1"],
-    ["0","1","0","0","0","1","1","1","0","0","1","0","0","0","0","0","0","1","1","0","0","1","0","0","0","1","1","0","1","1","1","0"],
-    ["0","1","1","0","1","1","0","0","0","1","1","1","0","1","0","0","0","1","1","0","1","1","1","0","0","1","1","0","0","1","0","1"],
-    ["0","1","1","0","1","1","1","0","0","1","1","0","0","1","0","1","0","1","1","0","1","1","0","1","0","1","1","0","0","1","0","1"],
-    ["0","0","1","0","0","0","0","0","0","1","1","0","0","1","1","0","0","1","1","0","1","1","1","1","0","0","1","0","0","0","0","0"],
-    ["0","0","1","0","0","0","0","0","0","1","1","0","0","1","0","1","0","1","1","0","1","0","0","0","0","1","1","1","0","1","0","0"],
-    ["0","1","1","1","0","0","1","1","0","1","1","0","0","0","0","1","0","1","1","0","1","1","0","0","0","1","1","0","0","0","1","1"],
-    ["0","1","1","0","0","1","1","0","0","1","1","0","1","1","1","1","0","0","1","0","0","0","0","0","0","1","1","1","0","0","1","1"],
-    ["0","0","1","1","1","0","0","1","0","0","1","1","1","0","0","1","0","0","1","0","0","1","1","1","0","0","1","0","0","0","0","0"],
-    ["0","1","1","0","0","1","1","0","0","1","0","0","1","0","0","1","0","0","1","0","0","0","0","0","0","0","1","1","1","0","1","0"],
-    ["0","1","1","0","0","0","1","1","0","0","1","0","0","0","0","0","0","1","0","0","1","0","0","1","0","0","1","0","0","0","0","0"],
-    ["0","1","1","0","0","1","0","0","0","1","1","0","1","1","0","0","0","1","1","1","0","1","0","1","0","1","1","0","1","1","1","1"],
-    ["0","1","1","0","0","1","1","0","0","1","1","0","0","1","1","0","0","1","1","0","1","1","1","1","0","0","1","0","0","0","0","0"],
-    ["0","1","1","1","1","0","0","1","0","0","1","0","0","0","0","0","0","1","1","1","0","0","1","0","0","1","1","0","0","1","0","1"],
-    ["0","1","1","0","1","1","1","1","0","0","1","0","0","0","0","0","0","1","1","1","0","1","0","1","0","1","1","0","1","1","1","1"]
-  ]
-};
-// 32 * 32 for out, 32 * 32 for in, 32 for counter, 32 * 3 for nonce
-const chacha20_num_pub_inputs = 32 * 32 + 32 * 32 + 32 + 3 * 32;
-
 async function main() {
-  console.log("schedule full job");
-  const jobId0 = await scheduleJob(chacha20_public_inputs, chacha20_input);
-  const result0 = await pollJobResult(jobId0);
-  console.log(result0);
-
+  // load json from file
+  const jwt_verifier_input = JSON.parse(
+    readFileSync("jwt-verifier.input.json", "utf8")
+  );
   console.log("perform local witness extension and schedule job");
-  // the wasm files are generated by circom
-  const jobId1 = await scheduleJobLocalWtnsExt("./chacha20.wasm", chacha20_num_pub_inputs + 1, chacha20_input); // + 1 for public 1 in wtns
+  // the wasm files are generated by circom "circom jwt-verifier.circom --r1cs --wasm --O2"
+  const jobId1 = await scheduleJobLocalWtnsExt(
+    "./jwt-verifier.wasm",
+    49, // 31 public outputs in jwt circuit, 17 public inputs + 1 for fixed "1". These numbers can be gotten from the above circom command
+    jwt_verifier_input
+  );
   const result1 = await pollJobResult(jobId1);
   console.log(result1);
 }
 
-main()
-
-
-
-
+main();
